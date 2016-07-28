@@ -271,7 +271,9 @@ cases.push({
 
     thenable.then(function() {
       next('不应该进入这里');
-    }, function(data) {
+    });
+
+    thenable.catch(function(data) {
       next(data === promise ? null : 'data 应该是 Promise 对象');
     });
 
@@ -341,6 +343,50 @@ cases.push({
     });
 
     thenable.resolve('normal');
+  }
+});
+
+
+cases.push({
+  desc: 'catch 中，返回 thenable 对象',
+  run: function(next) {
+    var thenable = new Thenable();
+    thenable['catch'](function(data){
+      return new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve(data);
+        }, 10);
+      });
+    })
+    .then(function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+    thenable.reject('normal');
+  }
+});
+
+cases.push({
+  desc: '多条链并行',
+  run: function(next) {
+    var thenable = new Thenable();
+    thenable.resolve('normal');
+
+    thenable.then(function() {
+      return new Promise(function(resolve, reject) {
+        setTimeout(function() {
+          reject('success');
+        }, 10);
+      });
+    })
+    .catch(function(data) {
+      next(data === 'success' ? null : '这里必须要执行');
+    });
+
+    thenable.then(function(data) {
+      if (data !== 'normal') {
+        alert('多链条出问题啦');
+      }
+    });
   }
 });
 

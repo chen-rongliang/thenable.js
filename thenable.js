@@ -90,6 +90,7 @@
         forEach(self.runners, function(runner) {
           runner._exec(self.result, self.state);
         });
+        self.runners = [];
       }
 
       return self;
@@ -136,7 +137,7 @@
     },
 
     'catch': function(fn) {
-      this.then(null, fn);
+      return this.then(null, fn);
     }
   });
 
@@ -166,22 +167,24 @@
 
       while (fns = runs.shift()) {
         var done = fns[0], fail = fns[1];
+        var isDone = done && state === RESOLVED;
+        var isFail = fail && state === REJECTED;
 
-        if (done && state === RESOLVED) {
+        if (isDone) {
           result = done(result);
-
-          if (isThenable(result)) {
-            self.state = PENDING;
-            result.then(
-              function(data) { self._exec(data, RESOLVED); },
-              function(error) { self._exec(error, REJECTED); }
-            );
-            break;
-          }
-        } else if (fail) {
+        } else if (isFail) {
           result = fail(result);
           // 根据 promise/a 规范，这时候，需要把状态，更改为 resolved 了
           self.state = state = RESOLVED;
+        }
+
+        if ((isDone || isFail) && isThenable(result)) {
+          self.state = PENDING;
+          result.then(
+            function(data) { self._exec(data, RESOLVED); },
+            function(error) { self._exec(error, REJECTED); }
+          );
+          break;
         }
 
         self.result = result;
