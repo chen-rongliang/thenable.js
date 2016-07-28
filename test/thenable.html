@@ -273,7 +273,7 @@ cases.push({
       next('不应该进入这里');
     });
 
-    thenable.catch(function(data) {
+    thenable['catch'](function(data) {
       next(data === promise ? null : 'data 应该是 Promise 对象');
     });
 
@@ -378,7 +378,7 @@ cases.push({
         }, 10);
       });
     })
-    .catch(function(data) {
+    ['catch'](function(data) {
       next(data === 'success' ? null : '这里必须要执行');
     });
 
