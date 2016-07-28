@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>仿Promise的对象-Thenable</title>
+</head>
+<body>
+  测试用例
+
+<script src="../thenable.min.js"></script>
+<!-- 你没看错，这里为了兼容 ie 系列，就引入了一个 Promise 的 polyfill~~ -->
+<script src="./promise.polyfill.js"></script>
+<script src="./tester.js"></script>
+<script>
+var cases = [];
+
+cases.push({
+  desc: '正常使用-01',
+  run: function(next) {
+    var thenable = new Thenable();
+    thenable.then(function(data) {
+      next(data === 'normal' ? null : 'data应该为normal');
+    });
+    thenable.resolve('normal');
+  }
+});
+
+cases.push({
+  desc: '正常使用-02',
+  run: function(next) {
+    var thenable = new Thenable(function(resolve, reject) {
+      resolve('normal');
+    });
+    thenable.then(function(data) {
+      next(data === 'normal' ? null : 'data应该为normal');
+    });
+  }
+});
+
+cases.push({
+  desc: 'resolve先触发',
+  run: function(next) {
+    var thenable = new Thenable();
+    thenable.resolve('normal');
+    thenable.then(function(data) {
+      next(data === 'normal' ? null : 'data应该是normal');
+    });
+  }
+});
+
+cases.push({
+  desc: '触发reject',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.then(function() {
+      next('不应该进入 resolve 的回调中');
+    }, function(data) {
+      next(data === 'test' ? null : 'data应该是"test"');
+    });
+
+    thenable.reject('test');
+  }
+});
+
+cases.push({
+  desc: '链式的then，普通测试',
+  run: function(next) {
+    var thenable = new Thenable();
+    thenable.resolve('normal');
+
+    var error = null;
+    thenable.then(function(data) {
+      error = data === 'normal' ? null : 'data的值，应该是 normal';
+    }, function() {
+      next('不应该进入reject的逻辑')
+    })
+    .then(function(data) {
+      error = error || data === void 0 ? null : 'data的值，应该是 undefined';
+    })
+    .then(function() {
+      next(error);
+    });
+  }
+});
+
+cases.push({
+  desc: 'then返回一个Thenable对象',
+  run: function(next) {
+    var thenable = new Thenable();
+    var error = null;
+
+    thenable.then(function(data) {
+      var nthen = new Thenable();
+      nthen.resolve(data);
+      return nthen;
+    })
+    .then(function(data) {
+      next(data === 'normal' ? null : 'data 必须是 normal');
+    });
+
+    thenable.resolve('normal');
+  }
+});
+
+cases.push({
+  desc: 'then返回一个Thenable对象，此对象异步执行',
+  run: function(next) {
+    var thenable = new Thenable();
+    thenable.resolve('normal');
+
+    thenable.then(function(data) {
+      var nthen = new Thenable();
+
+      setTimeout(function() {
+        nthen.resolve(data + '2');
+      }, 10);
+
+      return nthen;
+    })
+    .then(function(data) {
+      next(data === 'normal2' ? null : 'data 应该是 normal2');
+    });
+  }
+});
+
+cases.push({
+  desc: 'then 返回一个 Thenable 对象，此对象是 reject 状态',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.then(function(data) {
+      return Thenable.reject(data);
+    })
+    ['catch'](function(data) {
+      next(data === 'normal' ? null: 'data 应该是 normal');
+    });
+
+    thenable.resolve('normal');
+  }
+});
+
+cases.push({
+  desc: 'then 返回一个 Thenable 对象，此对象异步触发 reject 状态',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.then(function(data) {
+      var nthen = new Thenable();
+      setTimeout(function() {
+        nthen.reject(data);
+      }, 10);
+      return nthen;
+    })
+    .then(function() {
+      next('这里不该被执行');
+    }, function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+
+    thenable.resolve('normal');
+  }
+});
+
+cases.push({
+  desc: 'resolve一个Thenable对象',
+  run: function(next) {
+    var thenable = new Thenable();
+    var thenable2 = new Thenable();
+
+    thenable.resolve(thenable2);
+    thenable2.resolve('normal');
+    thenable.then(function(data) {
+      next(data === 'normal' ? null : 'data应该是 normal');
+    });
+
+  }
+});
+
+cases.push({
+  desc: 'resolve一个Thenable对象，此对象异步resolve',
+  run: function(next) {
+    var thenable = new Thenable();
+    var thenable2 = new Thenable();
+
+    thenable.resolve(thenable2);
+    thenable.then(function(data) {
+      next(data === 'normal' ? null : 'data应该是 normal');
+    });
+
+    setTimeout(function() {
+      thenable2.resolve('normal');
+    }, 10);
+  }
+});
+
+cases.push({
+  desc: 'resolve一个Thenable对象，此对象是 reject 状态',
+  run: function(next) {
+    var thenable = new Thenable();
+    var thenable2 = new Thenable();
+
+    thenable.resolve(thenable2);
+    thenable.then(function(data) {
+      next('不应该进入这里');
+    })
+    ['catch'](function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+
+    thenable2.reject('normal');
+  }
+});
+
+cases.push({
+  desc: 'resolve一个Thenable对象，此对象异步触发 reject 状态',
+  run: function(next) {
+    var thenable = new Thenable();
+    var thenable2 = new Thenable();
+
+    thenable.resolve(thenable2);
+    thenable.then(function(data) {
+      next('不应该进入这里');
+    })
+    ['catch'](function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+
+    setTimeout(function() {
+      thenable2.reject('normal');
+    }, 10);
+  }
+});
+
+cases.push({
+  desc: 'reject 一个 Thenable 对象',
+  run: function(next) {
+    var thenable = new Thenable();
+    var thenable2 = new Thenable();
+
+    thenable.reject(thenable2);
+    thenable.then(function(data) {
+      next('不应该进入这里');
+    })
+    ['catch'](function(data) {
+      next(data === thenable2 ? null : 'data 应该是一个 Thenable 对象');
+    });
+
+    thenable2.resolve('normal');
+  }
+});
+
+cases.push({
+  desc: 'resolve 一个 promise/a 规范的对象',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.resolve(Promise.resolve('normal'));
+
+    thenable.then(function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+  }
+});
+
+cases.push({
+  desc: 'reject 一个 promise/a 规范的对象',
+  run: function(next) {
+    var thenable = new Thenable();
+    var promise = new Promise(function(r, j) { j(); });
+
+    thenable.then(function() {
+      next('不应该进入这里');
+    }, function(data) {
+      next(data === promise ? null : 'data 应该是 Promise 对象');
+    });
+
+    thenable.reject(promise);
+
+    promise['catch'](function() { /* nothing */ });
+  }
+});
+
+cases.push({
+  desc: 'then 返回一个 Promise 对象，此对象 resolve',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.then(function() {
+      return Promise.resolve('normal');
+    })
+    .then(function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+
+    thenable.resolve();
+  }
+});
+
+cases.push({
+  desc: 'then 返回一个 Promise 对象，此对象 reject',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.then(function() {
+      return Promise.reject('normal');
+    })
+    .then(function() {
+      next('不应该进入此逻辑')
+    })
+    ['catch'](function(data) {
+      next(data === 'normal' ? null : 'data 应该是 normal');
+    });
+
+    thenable.resolve();
+  }
+});
+
+cases.push({
+  desc: 'then + catch + then 链式调用',
+  run: function(next) {
+    var thenable = new Thenable();
+
+    thenable.then(function(data){
+      return Promise.reject('normal');
+    }, function() {
+      next('不应该进入此逻辑');
+    })
+    ['catch'](function(data) {
+      if (data !== 'normal') {
+        next('data 应该是 normal');
+      }
+    })
+    .then(function(data) {
+      // 因为在上一个执行过程[catch/then]中，并没有返回内容
+      if (data !== undefined) {
+        next('data 应该是 undefined');
+      } else {
+        next(null);
+      }
+    });
+
+    thenable.resolve('normal');
+  }
+});
+
+loopTest(cases);
+</script>
+</body>
+</html>
