@@ -1,0 +1,25 @@
+{
+  "name": "thenablejs",
+  "version": "0.0.2",
+  "description": "another promise object for any place",
+  "main": "thenable.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linfenpan/thenable.js.git"
+  },
+  "keywords": [
+    "promise"
+  ],
+  "author": "da宗熊",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/linfenpan/thenable.js/issues"
+  },
+  "homepage": "https://github.com/linfenpan/thenable.js#readme"
+}
